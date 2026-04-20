@@ -24,6 +24,75 @@ def todoist_list_projects() -> list[dict]:
     return _get_client().list_projects()
 
 
+@mcp.tool()
+def todoist_create_task(
+    content: str,
+    project_id: str | None = None,
+    section_id: str | None = None,
+    labels: list[str] | None = None,
+    priority: int | None = None,
+    due_string: str | None = None,
+    description: str | None = None,
+    parent_id: str | None = None,
+) -> dict:
+    """Create a new Todoist task.
+
+    priority: 1=normal (lowest) through 4=urgent (highest).
+    due_string: natural language like "tomorrow at 3pm", "every monday".
+    Returns the created task.
+    """
+    return _get_client().create_task(
+        content=content,
+        project_id=project_id,
+        section_id=section_id,
+        parent_id=parent_id,
+        labels=labels,
+        priority=priority,
+        due_string=due_string,
+        description=description,
+    )
+
+
+@mcp.tool()
+def todoist_update_task(
+    task_id: str,
+    content: str | None = None,
+    description: str | None = None,
+    labels: list[str] | None = None,
+    priority: int | None = None,
+    due_string: str | None = None,
+    project_id: str | None = None,
+    section_id: str | None = None,
+    parent_id: str | None = None,
+) -> dict:
+    """Update a Todoist task. Only fields you pass are changed.
+
+    Moves (project_id / section_id / parent_id) are handled automatically via
+    the move endpoint — you can change section + content in one call.
+    Returns the updated task.
+    """
+    fields = {
+        "content": content,
+        "description": description,
+        "labels": labels,
+        "priority": priority,
+        "due_string": due_string,
+        "project_id": project_id,
+        "section_id": section_id,
+        "parent_id": parent_id,
+    }
+    return _get_client().update_task(
+        task_id,
+        **{k: v for k, v in fields.items() if v is not None},
+    )
+
+
+@mcp.tool()
+def todoist_complete_task(task_id: str) -> dict:
+    """Mark a Todoist task as complete. Returns {completed, task_id}."""
+    return _get_client().complete_task(task_id)
+
+
 def main() -> None:
     mcp.run()
 
