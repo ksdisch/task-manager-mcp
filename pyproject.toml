@@ -1,0 +1,37 @@
+[project]
+name = "todoist-mcp"
+version = "0.1.0"
+description = "Local stdio MCP server exposing Todoist operations — a Zapier replacement."
+readme = "README.md"
+authors = [
+    { name = "ksdisch", email = "kstan.disch@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.27.0",
+    "python-dotenv>=1.2.2",
+    "todoist-api-python>=4.0.0",
+]
+
+[project.scripts]
+todoist-mcp = "todoist_mcp.server:main"
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.11",
+]
