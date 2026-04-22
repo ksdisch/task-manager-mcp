@@ -5,6 +5,9 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
+DESCRIPTION_PREVIEW_LEN = 200
+TRUNCATED_SUFFIX = "...[truncated]"
+
 
 def format_project(project: Any) -> dict:
     return {
@@ -15,7 +18,7 @@ def format_project(project: Any) -> dict:
 
 
 def format_task(task: Any) -> dict:
-    """Full-view task (no description truncation — Phase 3 adds that for search)."""
+    """Full-view task for create/update/get — no description truncation."""
     return {
         "id": task.id,
         "content": task.content,
@@ -27,6 +30,27 @@ def format_task(task: Any) -> dict:
         "priority": task.priority,
         "due": _format_due(task.due),
     }
+
+
+def format_task_preview(task: Any) -> dict:
+    """Search-result task — description truncated to 200 chars."""
+    return {
+        "id": task.id,
+        "content": task.content,
+        "project_id": task.project_id,
+        "labels": list(task.labels) if task.labels else [],
+        "priority": task.priority,
+        "due": _format_due(task.due),
+        "description_preview": _truncate_description(task.description),
+    }
+
+
+def _truncate_description(desc: str | None) -> str:
+    if not desc:
+        return ""
+    if len(desc) > DESCRIPTION_PREVIEW_LEN:
+        return desc[:DESCRIPTION_PREVIEW_LEN] + TRUNCATED_SUFFIX
+    return desc
 
 
 def _format_due(due: Any) -> dict | None:

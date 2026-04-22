@@ -217,3 +217,135 @@ def test_rate_limit_missing_retry_after_header(mock_api_cls: MagicMock) -> None:
     assert result["code"] == 429
     assert result["retry_after"] is None
     assert result["retryable"] is True
+
+
+# ---------- search_tasks ----------
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_basic_shape(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.filter_tasks.return_value = iter(
+        [[_fake_task(id="t1", content="Buy milk", description="2%")]]
+    )
+
+    client = TodoistClient(token="t")
+    result = client.search_tasks("today", limit=10)
+
+    mock_api.filter_tasks.assert_called_once_with(query="today", limit=10)
+    assert result["count"] == 1
+    assert result["truncated"] is False
+    task = result["tasks"][0]
+    assert task["id"] == "t1"
+    assert task["content"] == "Buy milk"
+    assert task["description_preview"] == "2%"
+    # Preview shape must NOT include full description or section/parent fields
+    assert "description" not in task
+    assert "section_id" not in task
+    assert "parent_id" not in task
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_uses_default_limit_50(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.filter_tasks.return_value = iter([[]])
+
+    client = TodoistClient(token="t")
+    client.search_tasks("@waiting-on")
+
+    mock_api.filter_tasks.assert_called_once_with(query="@waiting-on", limit=50)
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_caps_limit_at_200(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.filter_tasks.return_value = iter([[]])
+
+    client = TodoistClient(token="t")
+    client.search_tasks("overdue", limit=5000)
+
+    mock_api.filter_tasks.assert_called_once_with(query="overdue", limit=200)
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_truncates_long_description(mock_api_cls: MagicMock) -> None:
+    long_desc = "x" * 250
+    mock_api = mock_api_cls.return_value
+    mock_api.filter_tasks.return_value = iter([[_fake_task(description=long_desc)]])
+
+    client = TodoistClient(token="t")
+    result = client.search_tasks("today")
+
+    preview = result["tasks"][0]["description_preview"]
+    assert preview == "x" * 200 + "...[truncated]"
+    assert len(preview) == 214  # 200 base chars + len("...[truncated]")
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_short_description_not_truncated(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.filter_tasks.return_value = iter([[_fake_task(description="short note")]])
+
+    client = TodoistClient(token="t")
+    result = client.search_tasks("today")
+
+    assert result["tasks"][0]["description_preview"] == "short note"
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_truncated_true_when_second_page_exists(mock_api_cls: MagicMock) -> None:
+    # limit=2, first page has 2 tasks, second page has more → truncated=True
+    mock_api = mock_api_cls.return_value
+    page1 = [_fake_task(id="t1"), _fake_task(id="t2")]
+    page2 = [_fake_task(id="t3")]
+    mock_api.filter_tasks.return_value = iter([page1, page2])
+
+    client = TodoistClient(token="t")
+    result = client.search_tasks("today", limit=2)
+
+    assert result["count"] == 2
+    assert result["truncated"] is True
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_truncated_false_when_first_page_short(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    # limit=10, first page has 3 → no need to peek, not truncated
+    mock_api.filter_tasks.return_value = iter([[_fake_task(), _fake_task(), _fake_task()]])
+
+    client = TodoistClient(token="t")
+    result = client.search_tasks("today", limit=10)
+
+    assert result["count"] == 3
+    assert result["truncated"] is False
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_bad_filter_returns_invalid_filter_dict(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.filter_tasks.side_effect = _http_error(400, "unparseable filter")
+
+    client = TodoistClient(token="t")
+    result = client.search_tasks("### garbage ###")
+
+    assert result == {
+        "error": "invalid filter",
+        "filter": "### garbage ###",
+        "hint": "unparseable filter",
+    }
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_search_tasks_rate_limit_uses_generic_error_shape(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.filter_tasks.side_effect = _http_error(
+        429, "too many", headers={"Retry-After": "30"}
+    )
+
+    client = TodoistClient(token="t")
+    result = client.search_tasks("today")
+
+    # 429 should NOT be remapped to the filter-parse shape
+    assert result["code"] == 429
+    assert result["retry_after"] == 30
+    assert result["retryable"] is True

@@ -93,6 +93,24 @@ def todoist_complete_task(task_id: str) -> dict:
     return _get_client().complete_task(task_id)
 
 
+@mcp.tool()
+def todoist_search_tasks(filter: str, limit: int = 50) -> dict:  # noqa: A002
+    """Search Todoist tasks using the native filter syntax.
+
+    Filter examples:
+      "@waiting-on"              — tasks with the waiting-on label
+      "p1 & today"               — priority-1 tasks due today
+      "#Inbox & no date"         — Inbox tasks with no due date
+      "overdue"                  — anything past its due date
+      "7 days & !@waiting-on"    — due in next 7 days, excluding waiting-on
+
+    limit caps at 200 (default 50). Descriptions are truncated to 200 chars.
+    Response: {tasks: [...], count: int, truncated: bool}. truncated=true means
+    there are more matches than `limit` — refine the filter or raise the limit.
+    """
+    return _get_client().search_tasks(filter_query=filter, limit=limit)
+
+
 def main() -> None:
     mcp.run()
 

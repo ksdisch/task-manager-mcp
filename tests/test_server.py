@@ -67,11 +67,33 @@ def test_complete_task_tool_forwards_task_id() -> None:
     fake_client.complete_task.assert_called_once_with("t1")
 
 
-def test_all_phase2_tools_registered_with_fastmcp() -> None:
+def test_search_tasks_tool_forwards_filter_and_limit() -> None:
+    fake_client = MagicMock()
+    fake_client.search_tasks.return_value = {"tasks": [], "count": 0, "truncated": False}
+
+    with patch.object(server, "_client", fake_client):
+        result = server.todoist_search_tasks(filter="@waiting-on", limit=25)
+
+    assert result == {"tasks": [], "count": 0, "truncated": False}
+    fake_client.search_tasks.assert_called_once_with(filter_query="@waiting-on", limit=25)
+
+
+def test_search_tasks_tool_uses_default_limit() -> None:
+    fake_client = MagicMock()
+    fake_client.search_tasks.return_value = {"tasks": [], "count": 0, "truncated": False}
+
+    with patch.object(server, "_client", fake_client):
+        server.todoist_search_tasks(filter="today")
+
+    fake_client.search_tasks.assert_called_once_with(filter_query="today", limit=50)
+
+
+def test_all_phase3_tools_registered_with_fastmcp() -> None:
     tool_names = {t.name for t in server.mcp._tool_manager.list_tools()}
     assert {
         "todoist_list_projects",
         "todoist_create_task",
         "todoist_update_task",
         "todoist_complete_task",
+        "todoist_search_tasks",
     }.issubset(tool_names)

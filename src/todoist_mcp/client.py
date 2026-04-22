@@ -14,9 +14,12 @@ import httpx
 from dotenv import load_dotenv
 from todoist_api_python.api import TodoistAPI
 
-from .formatters import format_project, format_task
+from .formatters import format_project, format_task, format_task_preview
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+
+DEFAULT_SEARCH_LIMIT = 50
+MAX_SEARCH_LIMIT = 200
 
 
 def _api_error(exc: httpx.HTTPStatusError) -> dict:
@@ -108,3 +111,30 @@ class TodoistClient:
         except httpx.HTTPStatusError as e:
             return _api_error(e)
         return {"completed": bool(success), "task_id": task_id}
+
+    def search_tasks(self, filter_query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> dict:
+        """Native-filter task search. Caps at MAX_SEARCH_LIMIT, truncates descriptions."""
+        capped = max(1, min(limit, MAX_SEARCH_LIMIT))
+
+        try:
+            pages = self._api.filter_tasks(query=filter_query, limit=capped)
+            first_page = next(pages, [])
+
+            # Detect result-list truncation: if the first page filled the cap,
+            # peek at the next iteration. Any content there means there's more
+            # than the caller's limit.
+            truncated = False
+            if len(first_page) >= capped:
+                next_page = next(pages, None)
+                truncated = bool(next_page)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 400:
+                return {
+                    "error": "invalid filter",
+                    "filter": filter_query,
+                    "hint": (e.response.text or str(e))[:300],
+                }
+            return _api_error(e)
+
+        tasks = [format_task_preview(t) for t in first_page[:capped]]
+        return {"tasks": tasks, "count": len(tasks), "truncated": truncated}
