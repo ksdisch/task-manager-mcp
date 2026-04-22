@@ -21,11 +21,11 @@ Full reference:
 
 | Goal | Filter |
 |---|---|
-| Everything I'm waiting on someone else for | `@waiting-on` |
+| Everything I'm waiting on someone else for | `@waiting-response` |
 | Priority-1 tasks due today | `p1 & today` |
 | Inbox items that still need a date | `#Inbox & no date` |
 | Everything past its due date | `overdue` |
-| The next week's work, minus anything parked on someone else | `7 days & !@waiting-on` |
+| The next week's work, minus anything parked on someone else | `7 days & !@waiting-response` |
 
 ### Operators quick reference
 
