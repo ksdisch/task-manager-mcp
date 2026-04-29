@@ -98,11 +98,11 @@ def todoist_search_tasks(filter: str, limit: int = 50) -> dict:  # noqa: A002
     """Search Todoist tasks using the native filter syntax.
 
     Filter examples:
-      "@waiting-response"              — tasks with the waiting-response label
+      "@waiting-on"              — tasks with the waiting-on label
       "p1 & today"                     — priority-1 tasks due today
       "#Inbox & no date"               — Inbox tasks with no due date
       "overdue"                        — anything past its due date
-      "7 days & !@waiting-response"    — due in next 7 days, excluding waiting-response
+      "7 days & !@waiting-on"    — due in next 7 days, excluding waiting-on
 
     limit caps at 200 (default 50). Descriptions are truncated to 200 chars.
     Response: {tasks: [...], count: int, truncated: bool}. truncated=true means
