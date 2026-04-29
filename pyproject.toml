@@ -3,10 +3,12 @@ name = "todoist-mcp"
 version = "0.1.0"
 description = "Local stdio MCP server exposing Todoist operations — a Zapier replacement."
 readme = "README.md"
+license = { text = "MIT" }
 authors = [
     { name = "ksdisch", email = "kstan.disch@gmail.com" }
 ]
 requires-python = ">=3.11"
+keywords = ["mcp", "todoist", "claude", "anthropic", "productivity"]
 dependencies = [
     "mcp[cli]>=1.27.0",
     "python-dotenv>=1.2.2",

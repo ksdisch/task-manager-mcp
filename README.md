@@ -1,21 +1,84 @@
 # todoist-mcp
 
-Local stdio MCP server exposing Todoist operations. A personal Zapier replacement
-that drops the 100-task/mo cap and exposes Todoist's native filter syntax to Claude.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> Status: Phase 3 of 4 — read/write tools + search with native filter syntax.
-> Full install guide, badges, and P1 tools land in Phase 4. See `PROJECT_SPEC.md`
-> for the full plan.
+Local stdio MCP server exposing Todoist operations to Claude (Code, Desktop, or
+any MCP client). 8 tools covering the read/write surface a real workflow needs,
+including the native filter syntax that powers Todoist's own filter views.
+
+## Why this exists
+
+Zapier's MCP integration caps at 100 tasks/month and wraps Todoist with tools
+too narrow for real workflows — its `filter` parameter accepts only a handful
+of presets, so anything ad-hoc has to fall through to raw `API Request (Beta)`
+calls. In one month of usage, **87 of 102 invocations were raw API calls** for
+queries Zapier couldn't express natively.
+
+This server replaces that with eight purpose-built tools, exposes Todoist's
+full filter language to the LLM, and runs locally — no cap, no Zapier
+quota, no token in the client config.
+
+## Install
+
+```bash
+git clone https://github.com/ksdisch/todoist-mcp.git
+cd todoist-mcp
+cp .env.example .env       # then paste your TODOIST_API_TOKEN
+uv sync
+uv run todoist-mcp         # smoke test — Ctrl-C to exit
+```
+
+Get a Todoist API token at <https://app.todoist.com/app/settings/integrations/developer>.
+
+### Register with Claude Code
+
+```bash
+claude mcp add todoist -- uv --directory "$(pwd)" run todoist-mcp
+```
+
+### Register with Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "todoist": {
+      "command": "uv",
+      "args": ["--directory", "/absolute/path/to/todoist-mcp", "run", "todoist-mcp"]
+    }
+  }
+}
+```
+
+The token lives in the server's own `.env` — never in client configs.
+Rotating the token is a single-line edit; both clients pick it up on restart.
+
+## Tools
+
+| Tool | Signature | Purpose |
+|---|---|---|
+| `todoist_list_projects` | `()` | List every project. Returns `id, name, parent_id`. |
+| `todoist_create_task` | `(content, project_id?, section_id?, labels?, priority?, due_string?, description?, parent_id?)` | Create a task. Natural-language `due_string`. |
+| `todoist_update_task` | `(task_id, **any_field)` | Update any subset of fields. Auto-detects project/section/parent moves. |
+| `todoist_complete_task` | `(task_id)` | Mark complete. |
+| `todoist_search_tasks` | `(filter, limit=50)` | Native filter-syntax search (see Cookbook). Cap 200, default 50. |
+| `todoist_list_labels` | `()` | List every label. Returns `id, name, color, is_favorite`. |
+| `todoist_list_sections` | `(project_id)` | List sections in a project. Returns `id, name, project_id, order`. |
+| `todoist_create_project` | `(name, parent_id?, color?)` | Create a project. |
+
+All write tools return the created/updated object so the LLM can verify
+without a second read. HTTP errors are caught and returned as
+`{"error": ..., "code": ..., "message": ...}` — never raised into the MCP
+layer. Rate-limit (429) responses include `retry_after`.
 
 ## Filter Syntax Cookbook
 
 `todoist_search_tasks(filter, limit=50)` accepts Todoist's native filter
-language — the same one that powers filter views in the Todoist UI. This is
-the tool that replaces the raw `API Request (Beta)` calls a Zapier integration
-can't express.
+language — the same one that powers filter views in the Todoist UI.
 
-Full reference:
-<https://todoist.com/help/articles/introduction-to-filters-V98wIH>
+Full reference: <https://todoist.com/help/articles/introduction-to-filters-V98wIH>
 
 ### Recipes that cover 90% of real usage
 
@@ -57,8 +120,7 @@ Full reference:
 
 `truncated: true` means there are more matches than `limit` — raise the limit
 (cap 200) or refine the filter. Descriptions are capped at 200 chars with a
-`...[truncated]` suffix; call `todoist_update_task` / fetch the full task if
-you need the untruncated body.
+`...[truncated]` suffix.
 
 ### Bad filters
 
@@ -69,3 +131,21 @@ Todoist returns 400 for unparseable filters. The wrapper surfaces that as:
 ```
 
 — never raises into the MCP layer.
+
+## Development
+
+Common loops via `just`:
+
+```bash
+just install   # uv sync (incl. dev deps)
+just test      # pytest
+just lint      # ruff check
+just check     # test + lint
+just run       # uv run todoist-mcp (stdio server)
+```
+
+Or directly: `uv sync`, `uv run pytest`, `uv run ruff check .`, `uv run todoist-mcp`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
