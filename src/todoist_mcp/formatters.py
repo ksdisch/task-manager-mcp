@@ -17,6 +17,24 @@ def format_project(project: Any) -> dict:
     }
 
 
+def format_label(label: Any) -> dict:
+    return {
+        "id": label.id,
+        "name": label.name,
+        "color": label.color,
+        "is_favorite": label.is_favorite,
+    }
+
+
+def format_section(section: Any) -> dict:
+    return {
+        "id": section.id,
+        "name": section.name,
+        "project_id": section.project_id,
+        "order": section.order,
+    }
+
+
 def format_task(task: Any) -> dict:
     """Full-view task for create/update/get — no description truncation."""
     return {

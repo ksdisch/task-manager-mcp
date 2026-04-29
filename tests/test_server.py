@@ -88,7 +88,52 @@ def test_search_tasks_tool_uses_default_limit() -> None:
     fake_client.search_tasks.assert_called_once_with(filter_query="today", limit=50)
 
 
-def test_all_phase3_tools_registered_with_fastmcp() -> None:
+def test_list_labels_tool_returns_client_output() -> None:
+    expected = [{"id": "1", "name": "waiting-on", "color": "charcoal", "is_favorite": False}]
+    fake_client = MagicMock()
+    fake_client.list_labels.return_value = expected
+
+    with patch.object(server, "_client", fake_client):
+        result = server.todoist_list_labels()
+
+    assert result == expected
+    fake_client.list_labels.assert_called_once_with()
+
+
+def test_list_sections_tool_forwards_project_id() -> None:
+    expected = [{"id": "s1", "name": "Now", "project_id": "p1", "order": 0}]
+    fake_client = MagicMock()
+    fake_client.list_sections.return_value = expected
+
+    with patch.object(server, "_client", fake_client):
+        result = server.todoist_list_sections("p1")
+
+    assert result == expected
+    fake_client.list_sections.assert_called_once_with("p1")
+
+
+def test_create_project_tool_forwards_all_args() -> None:
+    fake_client = MagicMock()
+    fake_client.create_project.return_value = {"id": "new", "name": "X", "parent_id": "p"}
+
+    with patch.object(server, "_client", fake_client):
+        result = server.todoist_create_project(name="X", parent_id="p", color="blue")
+
+    assert result == {"id": "new", "name": "X", "parent_id": "p"}
+    fake_client.create_project.assert_called_once_with(name="X", parent_id="p", color="blue")
+
+
+def test_create_project_tool_minimal_args() -> None:
+    fake_client = MagicMock()
+    fake_client.create_project.return_value = {"id": "new"}
+
+    with patch.object(server, "_client", fake_client):
+        server.todoist_create_project(name="X")
+
+    fake_client.create_project.assert_called_once_with(name="X", parent_id=None, color=None)
+
+
+def test_all_v01_tools_registered_with_fastmcp() -> None:
     tool_names = {t.name for t in server.mcp._tool_manager.list_tools()}
     assert {
         "todoist_list_projects",
@@ -96,4 +141,7 @@ def test_all_phase3_tools_registered_with_fastmcp() -> None:
         "todoist_update_task",
         "todoist_complete_task",
         "todoist_search_tasks",
+        "todoist_list_labels",
+        "todoist_list_sections",
+        "todoist_create_project",
     }.issubset(tool_names)

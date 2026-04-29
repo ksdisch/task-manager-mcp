@@ -111,6 +111,32 @@ def todoist_search_tasks(filter: str, limit: int = 50) -> dict:  # noqa: A002
     return _get_client().search_tasks(filter_query=filter, limit=limit)
 
 
+@mcp.tool()
+def todoist_list_labels() -> list[dict]:
+    """List all Todoist labels. Returns id, name, color, is_favorite for each."""
+    return _get_client().list_labels()
+
+
+@mcp.tool()
+def todoist_list_sections(project_id: str) -> list[dict]:
+    """List sections in a Todoist project. Returns id, name, project_id, order for each."""
+    return _get_client().list_sections(project_id)
+
+
+@mcp.tool()
+def todoist_create_project(
+    name: str,
+    parent_id: str | None = None,
+    color: str | None = None,
+) -> dict:
+    """Create a new Todoist project. Returns the created project."""
+    return _get_client().create_project(
+        name=name,
+        parent_id=parent_id,
+        color=color,
+    )
+
+
 def main() -> None:
     mcp.run()
 

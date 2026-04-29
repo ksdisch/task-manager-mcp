@@ -14,7 +14,13 @@ import httpx
 from dotenv import load_dotenv
 from todoist_api_python.api import TodoistAPI
 
-from .formatters import format_project, format_task, format_task_preview
+from .formatters import (
+    format_label,
+    format_project,
+    format_section,
+    format_task,
+    format_task_preview,
+)
 
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
@@ -111,6 +117,43 @@ class TodoistClient:
         except httpx.HTTPStatusError as e:
             return _api_error(e)
         return {"completed": bool(success), "task_id": task_id}
+
+    def list_labels(self) -> list[dict]:
+        try:
+            return [
+                format_label(label)
+                for page in self._api.get_labels()
+                for label in page
+            ]
+        except httpx.HTTPStatusError as e:
+            return [_api_error(e)]
+
+    def list_sections(self, project_id: str) -> list[dict]:
+        try:
+            return [
+                format_section(s)
+                for page in self._api.get_sections(project_id=project_id)
+                for s in page
+            ]
+        except httpx.HTTPStatusError as e:
+            return [_api_error(e)]
+
+    def create_project(
+        self,
+        *,
+        name: str,
+        parent_id: str | None = None,
+        color: str | None = None,
+    ) -> dict:
+        try:
+            project = self._api.add_project(
+                name=name,
+                parent_id=parent_id,
+                color=color,
+            )
+        except httpx.HTTPStatusError as e:
+            return _api_error(e)
+        return format_project(project)
 
     def search_tasks(self, filter_query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> dict:
         """Native-filter task search. Caps at MAX_SEARCH_LIMIT, truncates descriptions."""

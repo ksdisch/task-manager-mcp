@@ -349,3 +349,113 @@ def test_search_tasks_rate_limit_uses_generic_error_shape(mock_api_cls: MagicMoc
     assert result["code"] == 429
     assert result["retry_after"] == 30
     assert result["retryable"] is True
+
+
+# ---------- list_labels ----------
+
+
+def _fake_label(
+    id_: str, name: str, color: str = "charcoal", is_favorite: bool = False
+) -> MagicMock:
+    m = MagicMock()
+    m.id = id_
+    m.name = name
+    m.color = color
+    m.is_favorite = is_favorite
+    return m
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_list_labels_flattens_pages_and_shapes_response(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.get_labels.return_value = iter(
+        [
+            [_fake_label("1", "waiting-on")],
+            [_fake_label("2", "someday", is_favorite=True)],
+        ]
+    )
+
+    client = TodoistClient(token="t")
+    labels = client.list_labels()
+
+    assert labels == [
+        {"id": "1", "name": "waiting-on", "color": "charcoal", "is_favorite": False},
+        {"id": "2", "name": "someday", "color": "charcoal", "is_favorite": True},
+    ]
+
+
+# ---------- list_sections ----------
+
+
+def _fake_section(id_: str, name: str, project_id: str, order: int = 0) -> MagicMock:
+    m = MagicMock()
+    m.id = id_
+    m.name = name
+    m.project_id = project_id
+    m.order = order
+    return m
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_list_sections_passes_project_id_and_flattens(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.get_sections.return_value = iter(
+        [
+            [
+                _fake_section("s1", "Now", "p1"),
+                _fake_section("s2", "Later", "p1", order=1),
+            ]
+        ]
+    )
+
+    client = TodoistClient(token="t")
+    sections = client.list_sections("p1")
+
+    mock_api.get_sections.assert_called_once_with(project_id="p1")
+    assert sections == [
+        {"id": "s1", "name": "Now", "project_id": "p1", "order": 0},
+        {"id": "s2", "name": "Later", "project_id": "p1", "order": 1},
+    ]
+
+
+# ---------- create_project ----------
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_create_project_minimal_args(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.add_project.return_value = _fake_project("new-id", "Side Hustle", None)
+
+    client = TodoistClient(token="t")
+    result = client.create_project(name="Side Hustle")
+
+    mock_api.add_project.assert_called_once_with(
+        name="Side Hustle", parent_id=None, color=None
+    )
+    assert result == {"id": "new-id", "name": "Side Hustle", "parent_id": None}
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_create_project_with_parent_and_color(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.add_project.return_value = _fake_project("c", "Child", "p1")
+
+    client = TodoistClient(token="t")
+    result = client.create_project(name="Child", parent_id="p1", color="blue")
+
+    mock_api.add_project.assert_called_once_with(
+        name="Child", parent_id="p1", color="blue"
+    )
+    assert result["parent_id"] == "p1"
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_create_project_http_error_returns_error_dict(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.add_project.side_effect = _http_error(400, "bad color")
+
+    client = TodoistClient(token="t")
+    result = client.create_project(name="X", color="not-a-color")
+
+    assert result["error"] == "todoist_api_error"
+    assert result["code"] == 400
