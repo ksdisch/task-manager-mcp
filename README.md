@@ -1,4 +1,4 @@
-# todoist-mcp
+# task-manager-mcp
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -6,6 +6,10 @@
 Local stdio MCP server exposing Todoist operations to Claude (Code, Desktop, or
 any MCP client). 8 tools covering the read/write surface a real workflow needs,
 including the native filter syntax that powers Todoist's own filter views.
+
+> **Naming note:** the repo is `task-manager-mcp` even though it wraps Todoist —
+> see the deployment note in *Why this exists* below. Internally the Python
+> package is still `todoist-mcp`; only the public-artifact name was changed.
 
 ## Why this exists
 
@@ -19,11 +23,29 @@ This server replaces that with eight purpose-built tools, exposes Todoist's
 full filter language to the LLM, and runs locally — no cap, no Zapier
 quota, no token in the client config.
 
+### A real-world deployment note
+
+The repo is named `task-manager-mcp` rather than `todoist-mcp` for a non-obvious
+reason. When this server is installed as a Claude Desktop / Cowork extension,
+Cowork's plugin runtime puts the spawned MCP process inside an Operon network
+sandbox with a managed HTTPS MITM proxy. The proxy pattern-matches on plugin
+identity: any plugin whose manifest advertises "Todoist" gets hijacked into
+Cowork's built-in Todoist connector spec — which expects an OAuth flow our
+static-token MCP doesn't speak. Tools list got replaced with phantom names
+(`todoist_get_comments`, `todoist_move_task`) that don't exist in our code, and
+every actual call returned 401.
+
+The fix was to strip "Todoist" from the manifest's `name` and `display_name`
+fields. The actual tool names (`todoist_search_tasks`, `todoist_list_labels`,
+etc.) stay the same — only the plugin's outer identity changes. Worth
+knowing if you're shipping any Todoist-adjacent MCP into Cowork, or any
+similarly-sandboxed runtime with managed connector OAuth.
+
 ## Install
 
 ```bash
-git clone https://github.com/ksdisch/todoist-mcp.git
-cd todoist-mcp
+git clone https://github.com/ksdisch/task-manager-mcp.git
+cd task-manager-mcp
 cp .env.example .env       # then paste your TODOIST_API_TOKEN
 uv sync
 uv run todoist-mcp         # smoke test — Ctrl-C to exit

@@ -1,5 +1,12 @@
 # todoist-mcp — Personal Todoist MCP Server
 
+> **Historical note (2026-05-05):** this is the original planning doc from
+> pre-build. v0.1.0 shipped as planned. The GitHub repo was later renamed to
+> `task-manager-mcp` for Cowork plugin compatibility (see README →
+> *A real-world deployment note*); the local Python package remains
+> `todoist-mcp` and all references in this doc to the package/executable name
+> are still accurate.
+
 **Status:** Plan / pre-build
 **Repo:** `~/Cowork/mcp-servers/todoist-mcp/` (currently empty)
 **Owner:** Kyle
