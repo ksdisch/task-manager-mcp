@@ -459,3 +459,34 @@ def test_create_project_http_error_returns_error_dict(mock_api_cls: MagicMock) -
 
     assert result["error"] == "todoist_api_error"
     assert result["code"] == 400
+
+
+# ---------- get_task ----------
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_get_task_returns_full_description(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    long_desc = "x" * 5000
+    mock_api.get_task.return_value = _fake_task(
+        id="t9", content="Call someone", description=long_desc
+    )
+
+    client = TodoistClient(token="fake-token")
+    task = client.get_task("t9")
+
+    assert task["id"] == "t9"
+    assert task["description"] == long_desc  # no truncation on the full view
+    mock_api.get_task.assert_called_once_with("t9")
+
+
+@patch("todoist_mcp.client.TodoistAPI")
+def test_get_task_returns_structured_error_on_404(mock_api_cls: MagicMock) -> None:
+    mock_api = mock_api_cls.return_value
+    mock_api.get_task.side_effect = _http_error(404, "not found")
+
+    client = TodoistClient(token="fake-token")
+    result = client.get_task("missing")
+
+    assert result["error"] == "todoist_api_error"
+    assert result["code"] == 404

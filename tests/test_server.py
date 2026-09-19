@@ -145,3 +145,14 @@ def test_all_v01_tools_registered_with_fastmcp() -> None:
         "todoist_list_sections",
         "todoist_create_project",
     }.issubset(tool_names)
+
+
+def test_get_task_tool_forwards_task_id() -> None:
+    fake_client = MagicMock()
+    fake_client.get_task.return_value = {"id": "t1", "description": "full text"}
+
+    with patch.object(server, "_client", fake_client):
+        result = server.todoist_get_task(task_id="t1")
+
+    assert result == {"id": "t1", "description": "full text"}
+    fake_client.get_task.assert_called_once_with("t1")

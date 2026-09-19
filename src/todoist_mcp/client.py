@@ -111,6 +111,14 @@ class TodoistClient:
             return _api_error(e)
         return format_task(task)
 
+    def get_task(self, task_id: str) -> dict:
+        """One task by id, full view: the description is never truncated."""
+        try:
+            task = self._api.get_task(task_id)
+        except httpx.HTTPStatusError as e:
+            return _api_error(e)
+        return format_task(task)
+
     def complete_task(self, task_id: str) -> dict:
         try:
             success = self._api.complete_task(task_id=task_id)
