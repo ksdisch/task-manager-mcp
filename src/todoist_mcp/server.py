@@ -88,6 +88,16 @@ def todoist_update_task(
 
 
 @mcp.tool()
+def todoist_get_task(task_id: str) -> dict:
+    """Fetch one task by id with its FULL description (search truncates to 200 chars).
+
+    Use this whenever you need the whole description: it is a read, so it never
+    changes the task. Returns the same shape as update_task.
+    """
+    return _get_client().get_task(task_id)
+
+
+@mcp.tool()
 def todoist_complete_task(task_id: str) -> dict:
     """Mark a Todoist task as complete. Returns {completed, task_id}."""
     return _get_client().complete_task(task_id)

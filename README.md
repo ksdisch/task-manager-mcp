@@ -84,6 +84,7 @@ Rotating the token is a single-line edit; both clients pick it up on restart.
 | `todoist_list_projects` | `()` | List every project. Returns `id, name, parent_id`. |
 | `todoist_create_task` | `(content, project_id?, section_id?, labels?, priority?, due_string?, description?, parent_id?)` | Create a task. Natural-language `due_string`. |
 | `todoist_update_task` | `(task_id, **any_field)` | Update any subset of fields. Auto-detects project/section/parent moves. |
+| `todoist_get_task` | `(task_id)` | Fetch one task by id with its full, untruncated description (read-only). |
 | `todoist_complete_task` | `(task_id)` | Mark complete. |
 | `todoist_search_tasks` | `(filter, limit=50)` | Native filter-syntax search (see Cookbook). Cap 200, default 50. |
 | `todoist_list_labels` | `()` | List every label. Returns `id, name, color, is_favorite`. |
